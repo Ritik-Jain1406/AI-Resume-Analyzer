@@ -1,0 +1,23 @@
+skill,category
+Python,Programming
+Java,Programming
+C++,Programming
+SQL,Programming
+JavaScript,Programming
+Django,Frameworks
+Flask,Frameworks
+React,Frameworks
+Spring Boot,Frameworks
+AWS,Cloud
+Azure,Cloud
+GCP,Cloud
+MySQL,Databases
+PostgreSQL,Databases
+MongoDB,Databases
+Git,Developer Tools
+Docker,Developer Tools
+Kubernetes,Developer Tools
+Communication,Soft Skills
+Leadership,Soft Skills
+Teamwork,Soft Skills
+Problem Solving,Soft Skills

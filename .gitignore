@@ -1,0 +1,48 @@
+# --- Byte-compiled / cache ---
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Virtual environments ---
+venv/
+.venv/
+env/
+ENV/
+
+# --- Environment / secrets ---
+.env
+.env.*
+!.env.example
+
+# --- Streamlit ---
+.streamlit/secrets.toml
+
+# --- Logs ---
+logs/
+*.log
+
+# --- Database ---
+database/*.db
+*.sqlite3
+
+# --- Data (keep sample files, ignore user uploads) ---
+data/resume_samples/*
+!data/resume_samples/.gitkeep
+data/job_descriptions/*
+!data/job_descriptions/.gitkeep
+
+# --- IDE ---
+.vscode/
+.idea/
+*.swp
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- Coverage ---
+.coverage
+htmlcov/
