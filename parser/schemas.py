@@ -40,6 +40,22 @@ class ResumeSections(BaseModel):
     achievements: str | None = None
 
 
+class SkillExtractionResult(BaseModel):
+    """
+    Output of the Phase 3 skill extraction pipeline.
+
+    `detected_by_category` / `missing_by_category` are keyed by every
+    category present in the skills database (data/skills.csv), even if
+    empty, so UI code can iterate categories without guarding for
+    missing keys.
+    """
+
+    detected_by_category: dict[str, list[str]] = Field(default_factory=dict)
+    missing_by_category: dict[str, list[str]] = Field(default_factory=dict)
+    all_detected: list[str] = Field(default_factory=list)
+    all_known_categories: list[str] = Field(default_factory=list)
+
+
 class ParsedResume(BaseModel):
     """Full structured output of the Phase 2 parsing pipeline."""
 

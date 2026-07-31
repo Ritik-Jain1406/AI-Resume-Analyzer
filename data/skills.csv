@@ -2,22 +2,82 @@ skill,category
 Python,Programming
 Java,Programming
 C++,Programming
-SQL,Programming
+C,Programming
+C#,Programming
 JavaScript,Programming
+TypeScript,Programming
+Go,Programming
+Rust,Programming
+Ruby,Programming
+PHP,Programming
+Swift,Programming
+Kotlin,Programming
+R,Programming
+MATLAB,Programming
+SQL,Programming
+Scala,Programming
+Bash,Programming
+HTML,Programming
+CSS,Programming
 Django,Frameworks
 Flask,Frameworks
+FastAPI,Frameworks
 React,Frameworks
+Angular,Frameworks
+Vue.js,Frameworks
+Node.js,Frameworks
+Express.js,Frameworks
 Spring Boot,Frameworks
+.NET,Frameworks
+Ruby on Rails,Frameworks
+Next.js,Frameworks
+TensorFlow,Frameworks
+PyTorch,Frameworks
+Keras,Frameworks
+Scikit-learn,Frameworks
+Pandas,Frameworks
+NumPy,Frameworks
+Bootstrap,Frameworks
+Tailwind CSS,Frameworks
 AWS,Cloud
 Azure,Cloud
 GCP,Cloud
+Heroku,Cloud
+DigitalOcean,Cloud
+Firebase,Cloud
+Vercel,Cloud
+Netlify,Cloud
 MySQL,Databases
 PostgreSQL,Databases
 MongoDB,Databases
+SQLite,Databases
+Redis,Databases
+Oracle,Databases
+Cassandra,Databases
+DynamoDB,Databases
+Elasticsearch,Databases
+MariaDB,Databases
 Git,Developer Tools
+GitHub,Developer Tools
+GitLab,Developer Tools
 Docker,Developer Tools
 Kubernetes,Developer Tools
+Jenkins,Developer Tools
+CI/CD,Developer Tools
+Postman,Developer Tools
+Jira,Developer Tools
+VS Code,Developer Tools
+Linux,Developer Tools
+Nginx,Developer Tools
+Terraform,Developer Tools
+Ansible,Developer Tools
 Communication,Soft Skills
 Leadership,Soft Skills
 Teamwork,Soft Skills
 Problem Solving,Soft Skills
+Time Management,Soft Skills
+Critical Thinking,Soft Skills
+Adaptability,Soft Skills
+Collaboration,Soft Skills
+Creativity,Soft Skills
+Attention to Detail,Soft Skills

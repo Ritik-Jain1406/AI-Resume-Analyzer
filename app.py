@@ -11,6 +11,7 @@ matching, etc.).
 
 from __future__ import annotations
 
+import json
 import tempfile
 from pathlib import Path
 
@@ -19,6 +20,7 @@ import streamlit as st
 from config import settings, ensure_directories
 from parser.resume_parser import parse_resume
 from parser.schemas import ParsedResume
+from parser.skill_extractor import extract_skills
 from utils.logger import get_logger
 from utils.validators import ValidationError, validate_file_size
 
@@ -145,12 +147,57 @@ def render_resume_upload() -> None:
             else:
                 st.caption("Not detected in this resume.")
 
+    st.subheader("🧠 Detected Skills")
+    skill_result = extract_skills(parsed.cleaned_text)
+    st.session_state["skill_extraction"] = skill_result
+
+    if not skill_result.all_detected:
+        st.info(
+            "No known skills were detected against our skills database. "
+            "Consider adding a dedicated Skills section listing your "
+            "tools and technologies."
+        )
+    else:
+        detected_categories = sum(
+            1 for skills in skill_result.detected_by_category.values() if skills
+        )
+        st.write(
+            f"**{len(skill_result.all_detected)} skill(s) detected** "
+            f"across {detected_categories} categor{'y' if detected_categories == 1 else 'ies'}."
+        )
+        for category in skill_result.all_known_categories:
+            detected = skill_result.detected_by_category.get(category, [])
+            missing = skill_result.missing_by_category.get(category, [])
+            if not detected and not missing:
+                continue
+            with st.expander(f"{category} — {len(detected)} detected", expanded=bool(detected)):
+                if detected:
+                    st.markdown(
+                        "**Detected:** " + " ".join(f"`{s}`" for s in detected)
+                    )
+                else:
+                    st.caption("None detected in this category.")
+                if missing:
+                    st.caption(
+                        "Other known skills in this category (not detected): "
+                        + ", ".join(missing)
+                    )
+        st.caption(
+            "This compares against our general skills database. Matching "
+            "against a specific job description comes in Job Matching / "
+            "Skill Gap."
+        )
+
     st.subheader("Structured Output (JSON)")
-    st.json(parsed.model_dump())
+    combined_output = {
+        **parsed.model_dump(),
+        "skill_extraction": skill_result.model_dump(),
+    }
+    st.json(combined_output)
 
     st.download_button(
         "Download parsed JSON",
-        data=parsed.model_dump_json(indent=2),
+        data=json.dumps(combined_output, indent=2, default=str),
         file_name=f"{Path(parsed.source_filename).stem}_parsed.json",
         mime="application/json",
     )
