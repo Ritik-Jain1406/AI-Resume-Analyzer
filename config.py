@@ -71,6 +71,12 @@ class Settings(BaseSettings):
     skills_csv: Path = DATA_DIR / "skills.csv"
     job_roles_csv: Path = DATA_DIR / "job_roles.csv"
 
+    # --- Phase 7: Gemini AI suggestions ---
+    # Read from the GEMINI_API_KEY environment variable / .env file only.
+    # Never given a default value and never logged or exposed to the UI.
+    gemini_api_key: str | None = Field(default=None)
+    gemini_model: str = Field(default="gemini-2.5-flash")
+
 
 settings = Settings()
 
@@ -82,6 +88,14 @@ def ensure_directories() -> None:
         directory.mkdir(parents=True, exist_ok=True)
 
 
+def safe_settings_dump() -> dict:
+    """Return settings as a dict with secrets masked — safe to print or log."""
+    data = settings.model_dump()
+    if data.get("gemini_api_key"):
+        data["gemini_api_key"] = "***configured***"
+    return data
+
+
 if __name__ == "__main__":
     ensure_directories()
-    print(settings.model_dump())
+    print(safe_settings_dump())

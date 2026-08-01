@@ -17,7 +17,12 @@ from pathlib import Path
 
 import streamlit as st
 
+from ai.action_verb_reference import ACTION_VERB_CATEGORIES
+from ai.gemini_service import GeminiServiceError, is_configured
+from ai.recommendation import generate_resume_suggestions
+from ai.schemas import AIResumeSuggestions
 from ats.ats_score import generate_ats_report
+from ats.schemas import ATSReport
 from config import settings, ensure_directories
 from matching.job_matcher import compute_job_match
 from matching.schemas import LearningPlan, MatchReport
@@ -396,6 +401,157 @@ def render_skill_gap() -> None:
     )
 
 
+def render_ai_suggestions() -> None:
+    st.title("🤖 AI Resume Suggestions")
+
+    parsed: ParsedResume | None = st.session_state.get("parsed_resume")
+    if parsed is None:
+        st.info("Upload a resume on the **Resume Upload** page first.", icon="📤")
+        return
+
+    if not is_configured():
+        st.warning(
+            "Gemini API key is not configured. Add GEMINI_API_KEY to your local "
+            ".env file to use AI Resume Suggestions.",
+            icon="🔑",
+        )
+        return
+
+    skill_result: SkillExtractionResult | None = st.session_state.get("skill_extraction")
+    if skill_result is None:
+        skill_result = extract_skills(parsed.cleaned_text)
+        st.session_state["skill_extraction"] = skill_result
+
+    ats_report: ATSReport = generate_ats_report(parsed, skill_result)
+    match_report: MatchReport | None = st.session_state.get("match_report")
+    learning_plan: LearningPlan | None = st.session_state.get("learning_plan")
+
+    if match_report is not None:
+        st.caption(
+            "✅ Job description results detected — job-specific suggestions will be included."
+        )
+    else:
+        st.caption(
+            "ℹ️ No job description analyzed yet. Run **Job Matching** first for "
+            "job-specific suggestions, or generate general suggestions now."
+        )
+
+    target_role = st.text_input(
+        "Target role (optional)",
+        placeholder="e.g. Backend Software Engineer",
+        key="ai_target_role",
+    )
+
+    has_existing = "ai_suggestions" in st.session_state
+    button_label = "Regenerate Suggestions" if has_existing else "Generate Suggestions"
+
+    if st.button(button_label, type="primary"):
+        try:
+            with st.spinner("Generating AI suggestions with Gemini..."):
+                suggestions = generate_resume_suggestions(
+                    parsed=parsed,
+                    skill_result=skill_result,
+                    ats_report=ats_report,
+                    target_role=target_role,
+                    match_report=match_report,
+                    learning_plan=learning_plan,
+                )
+            st.session_state["ai_suggestions"] = suggestions
+        except GeminiServiceError as exc:
+            # These messages are pre-validated as safe to show directly — never
+            # wrap them in additional detail that might leak internals.
+            st.error(str(exc))
+
+    suggestions: AIResumeSuggestions | None = st.session_state.get("ai_suggestions")
+
+    st.subheader("Stronger Action Verbs (reference)")
+    verb_cols = st.columns(len(ACTION_VERB_CATEGORIES))
+    for col, (category, verbs) in zip(verb_cols, ACTION_VERB_CATEGORIES.items()):
+        with col:
+            st.markdown(f"**{category}**")
+            for verb in verbs:
+                st.caption(verb)
+
+    if suggestions is None:
+        return
+
+    st.divider()
+
+    if suggestions.weaknesses:
+        st.subheader("Overall AI Recommendations")
+        priority_icons = {"High Priority": "🔴", "Medium Priority": "🟡", "Low Priority": "🟢"}
+        for tier in ("High Priority", "Medium Priority", "Low Priority"):
+            tier_items = [w for w in suggestions.weaknesses if w.priority == tier]
+            if not tier_items:
+                continue
+            st.markdown(f"**{priority_icons.get(tier, '•')} {tier}**")
+            for item in tier_items:
+                st.markdown(f"- **{item.issue}** — {item.recommendation}")
+
+    if suggestions.summary is not None:
+        st.subheader("Improve Your Summary")
+        st.markdown("**Original:**")
+        st.caption(suggestions.summary.original or "_No summary detected in the resume._")
+        st.markdown("**AI Improved Version:**")
+        st.write(suggestions.summary.improved or "_Not generated._")
+        with st.expander("More versions"):
+            st.markdown("**Concise version:**")
+            st.write(suggestions.summary.concise or "_Not generated._")
+            if suggestions.summary.target_role_focused:
+                st.markdown("**Target-role-focused version:**")
+                st.write(suggestions.summary.target_role_focused)
+
+    if suggestions.experience:
+        st.subheader("Experience Improvements")
+        for i, item in enumerate(suggestions.experience, start=1):
+            with st.expander(f"Bullet {i}: {item.original[:60]}..."):
+                st.markdown("**Original:**")
+                st.caption(item.original)
+                st.markdown("**Improved:**")
+                st.write(item.improved)
+                if item.reason:
+                    st.markdown("**Why:**")
+                    st.caption(item.reason)
+
+    if suggestions.projects:
+        st.subheader("Project Improvements")
+        for project in suggestions.projects:
+            with st.expander(project.project_name):
+                st.markdown("**Original:**")
+                st.caption(project.original or "_Not provided._")
+                if project.improved_bullets:
+                    st.markdown("**Improved bullets:**")
+                    for bullet in project.improved_bullets:
+                        st.markdown(f"- {bullet}")
+                if project.technologies:
+                    st.markdown("**Technologies:** " + ", ".join(f"`{t}`" for t in project.technologies))
+                if project.action_verbs:
+                    st.markdown("**Suggested action verbs:** " + ", ".join(project.action_verbs))
+                if project.suggestions:
+                    st.markdown("**Suggestions:**")
+                    for s in project.suggestions:
+                        st.markdown(f"- {s}")
+
+    if match_report is not None and suggestions.job_specific_suggestions:
+        st.subheader("Job-Specific Suggestions")
+        grouped: dict[str, list[str]] = {"Already Strong": [], "Improve": [], "Missing": []}
+        for item in suggestions.job_specific_suggestions:
+            grouped.setdefault(item.category, []).append(item.detail)
+        for category, details in grouped.items():
+            if not details:
+                continue
+            st.markdown(f"**{category}**")
+            for d in details:
+                st.markdown(f"- {d}")
+
+    st.download_button(
+        "Download AI suggestions (JSON)",
+        data=json.dumps(suggestions.model_dump(), indent=2, default=str),
+        file_name=f"{Path(parsed.source_filename).stem}_ai_suggestions.json",
+        mime="application/json",
+    )
+
+
 def render_placeholder(page_name: str) -> None:
     st.title(page_name)
     st.warning(f"'{page_name}' isn't implemented yet — coming in a later phase.")
@@ -425,6 +581,8 @@ def main() -> None:
         render_job_matching()
     elif selected_page == "Skill Gap":
         render_skill_gap()
+    elif selected_page == "AI Suggestions":
+        render_ai_suggestions()
     else:
         render_placeholder(selected_page)
 
