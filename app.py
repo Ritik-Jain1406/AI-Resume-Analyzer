@@ -20,7 +20,8 @@ import streamlit as st
 from ats.ats_score import generate_ats_report
 from config import settings, ensure_directories
 from matching.job_matcher import compute_job_match
-from matching.schemas import MatchReport
+from matching.schemas import LearningPlan, MatchReport
+from matching.skill_gap import analyze_skill_gap
 from parser.resume_parser import parse_resume
 from parser.schemas import ParsedResume, SkillExtractionResult
 from parser.skill_extractor import extract_skills
@@ -338,6 +339,63 @@ def render_job_matching() -> None:
     )
 
 
+def render_skill_gap() -> None:
+    st.title("📈 Skill Gap Analysis")
+
+    parsed: ParsedResume | None = st.session_state.get("parsed_resume")
+    if parsed is None:
+        st.info("Upload a resume on the **Resume Upload** page first.", icon="📤")
+        return
+
+    match_report: MatchReport | None = st.session_state.get("match_report")
+    if match_report is None:
+        st.info(
+            "Run a match on the **Job Matching** page first — skill gaps "
+            "are calculated against a specific job description.",
+            icon="🎯",
+        )
+        return
+
+    jd_text = st.session_state.get("jd_text_input", "") or ""
+
+    if not match_report.missing_skills:
+        st.success(
+            "No missing skills detected — this resume already covers every "
+            "skill found in the job description!",
+            icon="✅",
+        )
+        return
+
+    plan: LearningPlan = analyze_skill_gap(match_report.missing_skills, jd_text)
+    st.session_state["learning_plan"] = plan
+
+    count_cols = st.columns(3)
+    count_cols[0].metric("High Priority", plan.high_priority_count)
+    count_cols[1].metric("Medium Priority", plan.medium_priority_count)
+    count_cols[2].metric("Low Priority", plan.low_priority_count)
+
+    st.subheader("Suggested Roadmap")
+    for step in plan.roadmap:
+        st.markdown(f"- {step}")
+
+    st.subheader("Skill-by-Skill Breakdown")
+    priority_icons = {"High Priority": "🔴", "Medium Priority": "🟡", "Low Priority": "🟢"}
+    for item in plan.gap_items:
+        icon = priority_icons.get(item.priority, "•")
+        with st.expander(f"{icon} {item.skill} — {item.priority}"):
+            st.write(f"**Category:** {item.category}")
+            st.write(f"**Estimated time to learn:** {item.estimated_time}")
+            st.write(f"**Mentioned in JD:** {item.mention_count} time(s)")
+            st.markdown(f"**Resource:** [{item.resource_name}]({item.resource_url})")
+
+    st.download_button(
+        "Download learning plan (JSON)",
+        data=json.dumps(plan.model_dump(), indent=2, default=str),
+        file_name=f"{Path(parsed.source_filename).stem}_learning_plan.json",
+        mime="application/json",
+    )
+
+
 def render_placeholder(page_name: str) -> None:
     st.title(page_name)
     st.warning(f"'{page_name}' isn't implemented yet — coming in a later phase.")
@@ -365,6 +423,8 @@ def main() -> None:
         render_ats_analysis()
     elif selected_page == "Job Matching":
         render_job_matching()
+    elif selected_page == "Skill Gap":
+        render_skill_gap()
     else:
         render_placeholder(selected_page)
 

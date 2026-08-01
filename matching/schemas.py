@@ -29,3 +29,26 @@ class MatchReport(BaseModel):
 
     jd_word_count: int
     warnings: list[str] = Field(default_factory=list)
+
+
+class SkillGapItem(BaseModel):
+    """One missing skill with its priority, resource, and time estimate."""
+
+    skill: str
+    category: str
+    priority: str  # "High Priority" | "Medium Priority" | "Low Priority"
+    mention_count: int  # how many times the skill was mentioned in the JD
+    estimated_time: str  # e.g. "2-4 weeks" or "Ongoing practice"
+    resource_name: str
+    resource_url: str
+
+
+class LearningPlan(BaseModel):
+    """Full Phase 6 output: prioritized skill gaps + a suggested roadmap."""
+
+    gap_items: list[SkillGapItem] = Field(default_factory=list)
+    roadmap: list[str] = Field(default_factory=list)
+    total_missing: int = 0
+    high_priority_count: int = 0
+    medium_priority_count: int = 0
+    low_priority_count: int = 0

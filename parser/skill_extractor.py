@@ -86,12 +86,20 @@ def load_skills_db() -> pd.DataFrame:
     return df
 
 
-def _normalize(text: str) -> str:
-    """Lowercase and strip everything except characters that appear in skill names."""
+def normalize_skill_text(text: str) -> str:
+    """
+    Lowercase and strip everything except characters that appear in skill
+    names. Public so other modules (e.g. matching.skill_gap) can apply the
+    exact same normalization rules when matching skill names against text.
+    """
     text = text.lower()
     text = re.sub(r"[^a-z0-9+./#\s-]", " ", text)
     text = re.sub(r"\s+", " ", text)
     return text.strip()
+
+
+# Kept as a private alias so existing calls within this module are unaffected.
+_normalize = normalize_skill_text
 
 
 def _expand_aliases(normalized_text: str) -> str:
