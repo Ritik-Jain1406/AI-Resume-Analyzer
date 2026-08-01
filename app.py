@@ -19,6 +19,8 @@ import streamlit as st
 
 from ats.ats_score import generate_ats_report
 from config import settings, ensure_directories
+from matching.job_matcher import compute_job_match
+from matching.schemas import MatchReport
 from parser.resume_parser import parse_resume
 from parser.schemas import ParsedResume, SkillExtractionResult
 from parser.skill_extractor import extract_skills
@@ -251,6 +253,91 @@ def render_ats_analysis() -> None:
     )
 
 
+def render_job_matching() -> None:
+    st.title("🎯 Job Matching")
+
+    parsed: ParsedResume | None = st.session_state.get("parsed_resume")
+    if parsed is None:
+        st.info("Upload a resume on the **Resume Upload** page first.", icon="📤")
+        return
+
+    st.write("Paste a job description below to see how well your resume matches it.")
+
+    jd_text = st.text_area(
+        "Job description",
+        height=250,
+        placeholder="Paste the full job description here...",
+        key="jd_text_input",
+    )
+
+    uploaded_jd = st.file_uploader("...or upload a .txt file instead", type=["txt"])
+    if uploaded_jd is not None:
+        jd_text = uploaded_jd.getvalue().decode("utf-8", errors="ignore")
+        st.caption(f"Using uploaded file: {uploaded_jd.name}")
+
+    analyze_clicked = st.button("Analyze Match", type="primary", disabled=not jd_text.strip())
+
+    if analyze_clicked:
+        with st.spinner("Computing match (first run may download the semantic model)..."):
+            report = compute_job_match(parsed.cleaned_text, jd_text)
+        st.session_state["match_report"] = report
+
+    report: MatchReport | None = st.session_state.get("match_report")
+    if report is None:
+        return
+
+    for warning in report.warnings:
+        st.warning(warning, icon="⚠️")
+
+    score_col, meta_col = st.columns([2, 1])
+    with score_col:
+        st.metric("Overall Match", f"{report.overall_match_percent:.1f}%")
+        st.progress(min(report.overall_match_percent, 100) / 100)
+    with meta_col:
+        st.caption(f"Job description: {report.jd_word_count} words")
+
+    st.subheader("Match Signals")
+    sig_cols = st.columns(4)
+    sig_cols[0].metric(
+        "Semantic Similarity",
+        f"{report.semantic_similarity:.1f}%" if report.semantic_available else "N/A",
+    )
+    sig_cols[1].metric("Cosine Similarity", f"{report.cosine_similarity:.1f}%")
+    sig_cols[2].metric("Keyword Coverage", f"{report.keyword_coverage:.1f}%")
+    sig_cols[3].metric("Skill Match", f"{report.skill_match_percent:.1f}%")
+
+    st.subheader("Skills")
+    skill_col1, skill_col2 = st.columns(2)
+    with skill_col1:
+        st.markdown(f"**✅ Matched ({len(report.matched_skills)})**")
+        if report.matched_skills:
+            st.markdown(" ".join(f"`{s}`" for s in report.matched_skills))
+        else:
+            st.caption("None matched.")
+    with skill_col2:
+        st.markdown(f"**❌ Missing ({len(report.missing_skills)})**")
+        if report.missing_skills:
+            st.markdown(" ".join(f"`{s}`" for s in report.missing_skills))
+        else:
+            st.caption("None — every JD skill was found in the resume.")
+
+    st.subheader("Keyword Coverage")
+    kw_col1, kw_col2 = st.columns(2)
+    with kw_col1:
+        st.markdown(f"**✅ Matched ({len(report.matched_keywords)})**")
+        st.caption(", ".join(report.matched_keywords) or "None matched.")
+    with kw_col2:
+        st.markdown(f"**❌ Missing ({len(report.missing_keywords)})**")
+        st.caption(", ".join(report.missing_keywords) or "None missing.")
+
+    st.download_button(
+        "Download match report (JSON)",
+        data=json.dumps(report.model_dump(), indent=2, default=str),
+        file_name=f"{Path(parsed.source_filename).stem}_match_report.json",
+        mime="application/json",
+    )
+
+
 def render_placeholder(page_name: str) -> None:
     st.title(page_name)
     st.warning(f"'{page_name}' isn't implemented yet — coming in a later phase.")
@@ -276,6 +363,8 @@ def main() -> None:
         render_resume_upload()
     elif selected_page == "ATS Analysis":
         render_ats_analysis()
+    elif selected_page == "Job Matching":
+        render_job_matching()
     else:
         render_placeholder(selected_page)
 
