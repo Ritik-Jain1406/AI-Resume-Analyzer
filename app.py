@@ -17,9 +17,10 @@ from pathlib import Path
 
 import streamlit as st
 
+from ats.ats_score import generate_ats_report
 from config import settings, ensure_directories
 from parser.resume_parser import parse_resume
-from parser.schemas import ParsedResume
+from parser.schemas import ParsedResume, SkillExtractionResult
 from parser.skill_extractor import extract_skills
 from utils.logger import get_logger
 from utils.validators import ValidationError, validate_file_size
@@ -203,6 +204,53 @@ def render_resume_upload() -> None:
     )
 
 
+def render_ats_analysis() -> None:
+    st.title("✅ ATS Analysis")
+
+    parsed: ParsedResume | None = st.session_state.get("parsed_resume")
+    if parsed is None:
+        st.info("Upload a resume on the **Resume Upload** page first.", icon="📤")
+        return
+
+    skill_result: SkillExtractionResult | None = st.session_state.get("skill_extraction")
+    if skill_result is None:
+        skill_result = extract_skills(parsed.cleaned_text)
+        st.session_state["skill_extraction"] = skill_result
+
+    report = generate_ats_report(parsed, skill_result)
+
+    score_col, status_col = st.columns([2, 1])
+    with score_col:
+        st.metric("Overall ATS Score", f"{report.overall_score:.1f} / 100")
+        st.progress(min(report.overall_score, 100) / 100)
+    with status_col:
+        if report.passed:
+            st.success(f"Meets the {settings.ats_pass_threshold}/100 pass threshold", icon="✅")
+        else:
+            st.error(f"Below the {settings.ats_pass_threshold}/100 pass threshold", icon="⚠️")
+        st.caption(f"Based on {report.resume_word_count} words analyzed.")
+
+    st.subheader("Section-wise Breakdown")
+    for check in sorted(report.checks, key=lambda c: c.weight, reverse=True):
+        st.write(f"**{check.name}** — {check.score:.0f}/100  ·  weight {check.weight * 100:.0f}%")
+        st.progress(min(check.score, 100) / 100)
+        st.caption(check.message)
+
+    st.subheader("Top Suggestions")
+    if not report.suggestions:
+        st.success("No major issues found — this resume looks ATS-ready!")
+    else:
+        for i, suggestion in enumerate(report.suggestions, start=1):
+            st.markdown(f"{i}. {suggestion}")
+
+    st.download_button(
+        "Download ATS report (JSON)",
+        data=json.dumps(report.model_dump(), indent=2, default=str),
+        file_name=f"{Path(parsed.source_filename).stem}_ats_report.json",
+        mime="application/json",
+    )
+
+
 def render_placeholder(page_name: str) -> None:
     st.title(page_name)
     st.warning(f"'{page_name}' isn't implemented yet — coming in a later phase.")
@@ -226,6 +274,8 @@ def main() -> None:
         render_home()
     elif selected_page == "Resume Upload":
         render_resume_upload()
+    elif selected_page == "ATS Analysis":
+        render_ats_analysis()
     else:
         render_placeholder(selected_page)
 
