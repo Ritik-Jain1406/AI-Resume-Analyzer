@@ -89,14 +89,14 @@ def test_ats_weak_sections_bar_matches_check_count(full_pipeline_data):
     ats = full_pipeline_data["ats"]
     fig = charts.ats_weak_sections_bar(ats)
     bar = fig.data[0]
-    assert len(bar.kwargs["x"]) == len(ats.checks)
-    assert len(bar.kwargs["y"]) == len(ats.checks)
+    assert len(bar.x) == len(ats.checks)
+    assert len(bar.y) == len(ats.checks)
 
 
 def test_ats_weak_sections_bar_sorted_ascending(full_pipeline_data):
     ats = full_pipeline_data["ats"]
     fig = charts.ats_weak_sections_bar(ats)
-    scores = fig.data[0].kwargs["x"]
+    scores = list(fig.data[0].x)
     assert scores == sorted(scores)
 
 
@@ -104,9 +104,9 @@ def test_resume_strength_radar_closes_the_loop(full_pipeline_data):
     ats = full_pipeline_data["ats"]
     fig = charts.resume_strength_radar(ats)
     radar = fig.data[0]
-    assert len(radar.kwargs["r"]) == len(ats.checks) + 1
-    assert len(radar.kwargs["theta"]) == len(ats.checks) + 1
-    assert radar.kwargs["r"][0] == radar.kwargs["r"][-1]
+    assert len(radar.r) == len(ats.checks) + 1
+    assert len(radar.theta) == len(ats.checks) + 1
+    assert radar.r[0] == radar.r[-1]
 
 
 def test_skill_distribution_pie_matches_nonempty_categories(full_pipeline_data):
@@ -114,8 +114,8 @@ def test_skill_distribution_pie_matches_nonempty_categories(full_pipeline_data):
     fig = charts.skill_distribution_pie(skills)
     pie = fig.data[0]
     expected = sum(1 for v in skills.detected_by_category.values() if v)
-    assert len(pie.kwargs["labels"]) == expected
-    assert len(pie.kwargs["values"]) == expected
+    assert len(pie.labels) == expected
+    assert len(pie.values) == expected
 
 
 def test_skill_distribution_pie_empty_state_does_not_raise():
@@ -127,21 +127,21 @@ def test_skill_distribution_pie_empty_state_does_not_raise():
     )
     fig = charts.skill_distribution_pie(empty)
     pie = fig.data[0]
-    assert pie.kwargs["labels"] == ["No skills detected"]
+    assert list(pie.labels) == ["No skills detected"]
 
 
 def test_job_match_gauge_value_matches_report(full_pipeline_data):
     match = full_pipeline_data["match"]
     fig = charts.job_match_gauge(match)
-    assert fig.data[0].kwargs["value"] == match.overall_match_percent
+    assert fig.data[0].value == match.overall_match_percent
 
 
 def test_job_match_signals_bar_has_four_signals(full_pipeline_data):
     match = full_pipeline_data["match"]
     fig = charts.job_match_signals_bar(match)
     bar = fig.data[0]
-    assert bar.kwargs["x"] == ["Semantic", "Cosine", "Keyword", "Skill"]
-    assert len(bar.kwargs["y"]) == 4
+    assert list(bar.x) == ["Semantic", "Cosine", "Keyword", "Skill"]
+    assert len(bar.y) == 4
 
 
 def test_job_match_signals_bar_semantic_unavailable_shows_zero():
@@ -158,14 +158,14 @@ def test_job_match_signals_bar_semantic_unavailable_shows_zero():
     )
     fig = charts.job_match_signals_bar(match)
     bar = fig.data[0]
-    assert bar.kwargs["y"][0] == 0  # semantic slot shows 0, not a fabricated value
+    assert bar.y[0] == 0  # semantic slot shows 0, not a fabricated value
 
 
 def test_skill_gap_priority_bar_counts_sum_to_total(full_pipeline_data):
     plan = full_pipeline_data["plan"]
     fig = charts.skill_gap_priority_bar(plan)
     bar = fig.data[0]
-    assert sum(bar.kwargs["y"]) == plan.total_missing
+    assert sum(bar.y) == plan.total_missing
 
 
 def test_skill_gap_priority_bar_empty_plan_does_not_raise():
@@ -174,7 +174,7 @@ def test_skill_gap_priority_bar_empty_plan_does_not_raise():
     empty_plan = LearningPlan()
     fig = charts.skill_gap_priority_bar(empty_plan)
     bar = fig.data[0]
-    assert sum(bar.kwargs["y"]) == 0
+    assert sum(bar.y) == 0
 
 
 def test_ats_gauge_handles_zero_score():
@@ -182,7 +182,7 @@ def test_ats_gauge_handles_zero_score():
 
     zero_report = ATSReport(overall_score=0.0, passed=False, resume_word_count=0, checks=[])
     fig = charts.ats_score_gauge(zero_report)
-    assert fig.data[0].kwargs["value"] == 0.0
+    assert fig.data[0].value == 0.0
 
 
 def test_resume_strength_radar_handles_empty_checks_without_raising():
@@ -190,7 +190,9 @@ def test_resume_strength_radar_handles_empty_checks_without_raising():
 
     empty_report = ATSReport(overall_score=0.0, passed=False, resume_word_count=0, checks=[])
     fig = charts.resume_strength_radar(empty_report)
-    assert fig.data[0].kwargs["r"] == []
+    # Plotly stores an empty list input as either () or None depending on
+    # version — check emptiness rather than an exact `== []` equality.
+    assert not fig.data[0].r
 
 
 # --------------------------------------------------------------------------- #
