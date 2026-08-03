@@ -5,9 +5,8 @@ resumes, checks ATS (Applicant Tracking System) compatibility, matches
 resumes against job descriptions, identifies skill gaps, and generates
 AI-powered improvement suggestions — all through an interactive dashboard.
 
-> **Status:** Phases 1–7 implemented and tested. Phases 8–12 (dashboard
-> visualizations, resume comparison, interview prep, admin/history,
-> deployment) are not yet built.
+> **Status:** Phases 1–8 implemented and tested. Phases 9–12 (resume
+> comparison, interview prep, admin/history, deployment) are not yet built.
 
 ## Features
 
@@ -23,6 +22,10 @@ AI-powered improvement suggestions — all through an interactive dashboard.
 - 🤖 **AI Resume Suggestions** (Phase 7, Google Gemini) — improved summary
   versions, bullet-by-bullet rewrites with explanations, project
   improvements, prioritized weaknesses, and job-specific recommendations
+- 📊 **Interactive Dashboard** (Phase 8) — ATS score gauge, skill
+  distribution, resume-strength radar, weak-sections bar, job match
+  visualizations, and a pipeline overview — strictly presentation-only,
+  reads existing results rather than recomputing anything
 
 ## Tech Stack
 
@@ -52,6 +55,9 @@ AI-Resume-Analyzer/
 │   ├── schemas.py             #   - pydantic validation for Gemini's JSON output
 │   ├── recommendation.py      #   - orchestrator: Phase 1-6 data -> prompt -> validated result
 │   └── action_verb_reference.py  # static categorized verb list (no API call)
+├── visualization/              # Phase 8: dashboard charts + layout (read-only, no new analysis)
+│   ├── charts.py               #   - pure functions: existing model -> plotly Figure
+│   └── dashboard.py            #   - layout/composition + session-state gating
 ├── utils/                     # Shared helpers, constants, logger, validators
 ├── data/                      # Skills DB, sample resumes & job descriptions
 ├── tests/                     # Unit tests (one file per phase)

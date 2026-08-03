@@ -32,6 +32,7 @@ from parser.schemas import ParsedResume, SkillExtractionResult
 from parser.skill_extractor import extract_skills
 from utils.logger import get_logger
 from utils.validators import ValidationError, validate_file_size
+from visualization.dashboard import render_dashboard as render_dashboard_layout
 
 logger = get_logger(__name__)
 
@@ -552,6 +553,37 @@ def render_ai_suggestions() -> None:
     )
 
 
+def render_dashboard_page() -> None:
+    st.title("📊 Dashboard")
+
+    parsed: ParsedResume | None = st.session_state.get("parsed_resume")
+    if parsed is None:
+        st.info("Upload a resume on the **Resume Upload** page first.", icon="📤")
+        return
+
+    # ATS is cheap/deterministic, so — same as the ATS Analysis page — it's
+    # safe to (re)compute fresh here. Everything else is read-only from
+    # session state: the dashboard never triggers semantic matching or Gemini.
+    skill_result: SkillExtractionResult | None = st.session_state.get("skill_extraction")
+    if skill_result is None:
+        skill_result = extract_skills(parsed.cleaned_text)
+        st.session_state["skill_extraction"] = skill_result
+
+    ats_report = generate_ats_report(parsed, skill_result)
+    match_report: MatchReport | None = st.session_state.get("match_report")
+    learning_plan: LearningPlan | None = st.session_state.get("learning_plan")
+    ai_suggestions: AIResumeSuggestions | None = st.session_state.get("ai_suggestions")
+
+    render_dashboard_layout(
+        parsed=parsed,
+        ats_report=ats_report,
+        skill_result=skill_result,
+        match_report=match_report,
+        learning_plan=learning_plan,
+        ai_suggestions=ai_suggestions,
+    )
+
+
 def render_placeholder(page_name: str) -> None:
     st.title(page_name)
     st.warning(f"'{page_name}' isn't implemented yet — coming in a later phase.")
@@ -583,6 +615,8 @@ def main() -> None:
         render_skill_gap()
     elif selected_page == "AI Suggestions":
         render_ai_suggestions()
+    elif selected_page == "Dashboard":
+        render_dashboard_page()
     else:
         render_placeholder(selected_page)
 
