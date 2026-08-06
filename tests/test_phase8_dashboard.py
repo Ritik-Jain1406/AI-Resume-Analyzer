@@ -218,8 +218,19 @@ class _FakeCol:
 
 @pytest.fixture
 def fake_streamlit(monkeypatch):
-    """Minimal streamlit stand-in that records every call, for gating assertions."""
-    import sys
+    """
+    Minimal streamlit stand-in that records every call, for gating assertions.
+
+    Patches the `st` name directly on the already-imported
+    visualization.dashboard module, rather than swapping sys.modules and
+    forcing a reimport. The reimport approach is fragile: whether it
+    actually rebinds dashboard.py's `st` reference depends on exactly
+    when/whether `visualization.dashboard` was already imported elsewhere
+    in the pytest session (e.g. transitively via app.py), which varies
+    across test ordering and environments. Patching the attribute in
+    place works regardless of import history and is what monkeypatch is
+    designed for.
+    """
     import types as pytypes
 
     calls = []
@@ -237,9 +248,9 @@ def fake_streamlit(monkeypatch):
     fake_st.plotly_chart = lambda *a, **k: calls.append(("plotly_chart", a))
     fake_st.download_button = lambda *a, **k: calls.append(("download_button", a, k))
 
-    monkeypatch.setitem(sys.modules, "streamlit", fake_st)
-    monkeypatch.delitem(sys.modules, "visualization.dashboard", raising=False)
     from visualization import dashboard as dashboard_module
+
+    monkeypatch.setattr(dashboard_module, "st", fake_st)
 
     return dashboard_module, calls
 
