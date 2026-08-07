@@ -23,6 +23,8 @@ from ai.recommendation import generate_resume_suggestions
 from ai.schemas import AIResumeSuggestions
 from ats.ats_score import generate_ats_report
 from ats.schemas import ATSReport
+from comparison.comparison_service import compare_resumes
+from comparison.schemas import ResumeComparisonResult
 from config import settings, ensure_directories
 from matching.job_matcher import compute_job_match
 from matching.schemas import LearningPlan, MatchReport
@@ -32,6 +34,7 @@ from parser.schemas import ParsedResume, SkillExtractionResult
 from parser.skill_extractor import extract_skills
 from utils.logger import get_logger
 from utils.validators import ValidationError, validate_file_size
+from visualization.charts import comparison_ats_bar
 from visualization.dashboard import render_dashboard as render_dashboard_layout
 
 logger = get_logger(__name__)
@@ -42,6 +45,7 @@ PAGES: list[str] = [
     "ATS Analysis",
     "Job Matching",
     "Skill Gap",
+    "Resume Comparison",
     "AI Suggestions",
     "Interview Prep",
     "Dashboard",
@@ -584,6 +588,121 @@ def render_dashboard_page() -> None:
     )
 
 
+def _save_upload_to_temp(uploaded_file) -> str:
+    """Write a Streamlit UploadedFile to a temp path and return the path."""
+    suffix = Path(uploaded_file.name).suffix.lower()
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        tmp.write(uploaded_file.getvalue())
+        return tmp.name
+
+
+def render_resume_comparison() -> None:
+    st.title("🔀 Resume Comparison")
+    st.write(
+        "Upload two resume versions to see what changed — ATS score, "
+        "skills, and keywords. This page is fully independent of the "
+        "resume loaded on other pages."
+    )
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("Previous Resume")
+        old_file = st.file_uploader(
+            "Choose the previous version", type=["pdf", "docx"], key="cmp_old_upload"
+        )
+    with col2:
+        st.subheader("Updated Resume")
+        new_file = st.file_uploader(
+            "Choose the updated version", type=["pdf", "docx"], key="cmp_new_upload"
+        )
+
+    compare_clicked = st.button(
+        "Compare Resumes", type="primary", disabled=not (old_file and new_file)
+    )
+
+    if compare_clicked:
+        for f in (old_file, new_file):
+            try:
+                validate_file_size(len(f.getvalue()))
+            except ValidationError as exc:
+                st.error(f"{f.name}: {exc}")
+                return
+
+        old_path = new_path = None
+        try:
+            old_path = _save_upload_to_temp(old_file)
+            new_path = _save_upload_to_temp(new_file)
+            with st.spinner("Parsing and scoring both resumes..."):
+                result = compare_resumes(old_path, old_file.name, new_path, new_file.name)
+            st.session_state["comparison_result"] = result
+        except ValidationError as exc:
+            st.error(str(exc))
+            return
+        except Exception as exc:  # noqa: BLE001
+            logger.exception("Unexpected error comparing resumes")
+            st.error(f"Something went wrong while comparing these resumes: {exc}")
+            return
+        finally:
+            for p in (old_path, new_path):
+                if p:
+                    Path(p).unlink(missing_ok=True)
+
+    result: ResumeComparisonResult | None = st.session_state.get("comparison_result")
+    if result is None:
+        return
+
+    st.divider()
+    st.subheader("Verdict")
+    verdict = result.verdict
+    verdict_icon = {"Updated": "✅", "Previous": "⚠️", "Tie": "➖"}.get(verdict.better_resume, "➖")
+    st.markdown(f"### {verdict_icon} **{verdict.better_resume}** resume is stronger")
+    for reason in verdict.reasons:
+        st.markdown(f"- {reason}")
+
+    st.divider()
+    st.subheader("ATS Score")
+    metric_cols = st.columns(3)
+    metric_cols[0].metric("Previous", f"{result.old_ats_score:.1f}/100")
+    metric_cols[1].metric("Updated", f"{result.new_ats_score:.1f}/100", delta=f"{result.ats_score_delta:+.1f}")
+    improvement_display = (
+        "N/A" if result.ats_improvement_percent is None else f"{result.ats_improvement_percent:+.1f}%"
+    )
+    metric_cols[2].metric("Improvement", improvement_display)
+    st.plotly_chart(comparison_ats_bar(result.old_ats_score, result.new_ats_score), use_container_width=True)
+
+    with st.expander("Per-check breakdown"):
+        for check in result.check_deltas:
+            arrow = "🔼" if check.delta > 0 else ("🔽" if check.delta < 0 else "➖")
+            st.write(f"{arrow} **{check.name}**: {check.old_score:.0f} → {check.new_score:.0f} ({check.delta:+.1f})")
+
+    st.divider()
+    st.subheader("Skills")
+    skill_cols = st.columns(2)
+    with skill_cols[0]:
+        st.markdown(f"**✅ Added ({len(result.skill_delta.added)})**")
+        st.markdown(" ".join(f"`{s}`" for s in result.skill_delta.added) or "_None_")
+    with skill_cols[1]:
+        st.markdown(f"**❌ Removed ({len(result.skill_delta.removed)})**")
+        st.markdown(" ".join(f"`{s}`" for s in result.skill_delta.removed) or "_None_")
+
+    st.divider()
+    st.subheader("Keywords")
+    kw_cols = st.columns(2)
+    with kw_cols[0]:
+        st.markdown(f"**✅ Added ({len(result.keyword_delta.added)})**")
+        st.caption(", ".join(result.keyword_delta.added) or "None")
+    with kw_cols[1]:
+        st.markdown(f"**❌ Removed ({len(result.keyword_delta.removed)})**")
+        st.caption(", ".join(result.keyword_delta.removed) or "None")
+
+    st.download_button(
+        "Download comparison report (JSON)",
+        data=json.dumps(result.model_dump(), indent=2, default=str),
+        file_name="resume_comparison.json",
+        mime="application/json",
+    )
+
+
 def render_placeholder(page_name: str) -> None:
     st.title(page_name)
     st.warning(f"'{page_name}' isn't implemented yet — coming in a later phase.")
@@ -613,6 +732,8 @@ def main() -> None:
         render_job_matching()
     elif selected_page == "Skill Gap":
         render_skill_gap()
+    elif selected_page == "Resume Comparison":
+        render_resume_comparison()
     elif selected_page == "AI Suggestions":
         render_ai_suggestions()
     elif selected_page == "Dashboard":

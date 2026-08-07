@@ -167,6 +167,28 @@ def job_match_signals_bar(match_report: MatchReport) -> go.Figure:
     return fig
 
 
+def comparison_ats_bar(old_score: float, new_score: float) -> go.Figure:
+    """
+    Phase 9: simple before/after bar comparing two already-computed ATS
+    scores. Pure presentation — takes two numbers already produced by
+    ats.ats_score.generate_ats_report(), computes nothing new.
+    """
+    labels = ["Previous", "Updated"]
+    scores = [old_score, new_score]
+    colors = [_score_color(old_score), _score_color(new_score)]
+
+    fig = go.Figure(
+        go.Bar(x=labels, y=scores, marker_color=colors, text=[f"{s:.1f}" for s in scores], textposition="outside")
+    )
+    fig.update_layout(
+        title="ATS Score: Previous vs. Updated",
+        yaxis=dict(title="Score", range=[0, 105]),
+        height=300,
+        margin=dict(l=30, r=20, t=50, b=30),
+    )
+    return fig
+
+
 def skill_gap_priority_bar(learning_plan: LearningPlan) -> go.Figure:
     """Bar chart of missing-skill counts by priority tier."""
     tiers = ["High Priority", "Medium Priority", "Low Priority"]

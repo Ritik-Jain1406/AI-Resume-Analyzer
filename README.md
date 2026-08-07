@@ -5,8 +5,8 @@ resumes, checks ATS (Applicant Tracking System) compatibility, matches
 resumes against job descriptions, identifies skill gaps, and generates
 AI-powered improvement suggestions — all through an interactive dashboard.
 
-> **Status:** Phases 1–8 implemented and tested. Phases 9–12 (resume
-> comparison, interview prep, admin/history, deployment) are not yet built.
+> **Status:** Phases 1–9 implemented and tested. Phases 10–12 (interview
+> prep, admin/history, deployment) are not yet built.
 
 ## Features
 
@@ -26,6 +26,10 @@ AI-powered improvement suggestions — all through an interactive dashboard.
   distribution, resume-strength radar, weak-sections bar, job match
   visualizations, and a pipeline overview — strictly presentation-only,
   reads existing results rather than recomputing anything
+- 🔀 **Resume Comparison** (Phase 9) — compare two resume versions side
+  by side: ATS score delta (points + %), skills/keywords added or
+  removed, and a deterministic (non-LLM) verdict on which is stronger.
+  Fully independent of the single-resume session state used elsewhere.
 
 ## Tech Stack
 
@@ -58,6 +62,9 @@ AI-Resume-Analyzer/
 ├── visualization/              # Phase 8: dashboard charts + layout (read-only, no new analysis)
 │   ├── charts.py               #   - pure functions: existing model -> plotly Figure
 │   └── dashboard.py            #   - layout/composition + session-state gating
+├── comparison/                 # Phase 9: resume comparison (independent of Phase 1-8 session state)
+│   ├── diff_engine.py          #   - pure functions: two already-computed results -> deltas
+│   └── comparison_service.py   #   - orchestrator: calls parse_resume/extract_skills/generate_ats_report twice
 ├── utils/                     # Shared helpers, constants, logger, validators
 ├── data/                      # Skills DB, sample resumes & job descriptions
 ├── tests/                     # Unit tests (one file per phase)
