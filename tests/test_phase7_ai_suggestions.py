@@ -406,3 +406,94 @@ def test_generate_resume_suggestions_api_error_propagates(monkeypatch, with_api_
 
     with pytest.raises(GeminiAPIError):
         generate_resume_suggestions(parsed, skill_result, ats_report)
+
+
+# --------------------------------------------------------------------------- #
+# JSON recovery / single-retry pipeline (production bug fix — Gemini
+# sometimes ignores response_mime_type="application/json" and wraps the
+# JSON in markdown fences or explanatory prose)
+# --------------------------------------------------------------------------- #
+
+def test_generate_json_plain_json_parses_immediately(monkeypatch, with_api_key):
+    _, set_response = _install_fake_genai(monkeypatch)
+    set_response(lambda model, contents, config: SimpleNamespace(text='{"a": 1}'))
+    result = gemini_service.generate_json("system", "prompt")
+    assert result == {"a": 1}
+
+
+def test_generate_json_recovers_markdown_fenced_json(monkeypatch, with_api_key):
+    _, set_response = _install_fake_genai(monkeypatch)
+    set_response(lambda model, contents, config: SimpleNamespace(text='```json\n{"a": 2}\n```'))
+    result = gemini_service.generate_json("system", "prompt")
+    assert result == {"a": 2}
+
+
+def test_generate_json_recovers_bare_fenced_json_without_language_tag(monkeypatch, with_api_key):
+    _, set_response = _install_fake_genai(monkeypatch)
+    set_response(lambda model, contents, config: SimpleNamespace(text='```\n{"a": 3}\n```'))
+    result = gemini_service.generate_json("system", "prompt")
+    assert result == {"a": 3}
+
+
+def test_generate_json_recovers_json_surrounded_by_explanatory_text(monkeypatch, with_api_key):
+    _, set_response = _install_fake_genai(monkeypatch)
+    surrounded = 'Sure, here is the analysis:\n\n{"a": 4}\n\nLet me know if you need anything else!'
+    set_response(lambda model, contents, config: SimpleNamespace(text=surrounded))
+    result = gemini_service.generate_json("system", "prompt")
+    assert result == {"a": 4}
+
+
+def test_generate_json_retry_succeeds_after_first_response_unparseable(monkeypatch, with_api_key):
+    _, set_response = _install_fake_genai(monkeypatch)
+    call_count = {"n": 0}
+
+    def responder(model, contents, config):
+        call_count["n"] += 1
+        if call_count["n"] == 1:
+            return SimpleNamespace(text="Sorry, I can't help with that right now.")
+        # Second call (the retry) includes the stronger instruction in the prompt
+        assert "Return ONLY valid JSON" in contents
+        return SimpleNamespace(text='{"a": 5}')
+
+    set_response(responder)
+    result = gemini_service.generate_json("system", "prompt")
+    assert result == {"a": 5}
+    assert call_count["n"] == 2  # exactly one retry, not more
+
+
+def test_generate_json_retry_also_fails_raises_response_error(monkeypatch, with_api_key):
+    _, set_response = _install_fake_genai(monkeypatch)
+    call_count = {"n": 0}
+
+    def responder(model, contents, config):
+        call_count["n"] += 1
+        return SimpleNamespace(text="still not JSON, sorry")
+
+    set_response(responder)
+    with pytest.raises(GeminiResponseError):
+        gemini_service.generate_json("system", "prompt")
+    assert call_count["n"] == 2  # original attempt + exactly one retry, never more
+
+
+def test_generate_json_malformed_json_raises_response_error(monkeypatch, with_api_key):
+    _, set_response = _install_fake_genai(monkeypatch)
+    set_response(lambda model, contents, config: SimpleNamespace(text="{unterminated: true"))
+    with pytest.raises(GeminiResponseError):
+        gemini_service.generate_json("system", "prompt")
+
+
+def test_extract_largest_json_object_picks_largest_candidate():
+    text = 'small: {"x": 1} but the real one is {"a": {"nested": true}, "b": [1, 2, 3]}'
+    extracted = gemini_service._extract_largest_json_object(text)
+    assert extracted == '{"a": {"nested": true}, "b": [1, 2, 3]}'
+
+
+def test_strip_markdown_fences_removes_language_tag_and_fences():
+    text = '```json\n{"a": 1}\n```'
+    assert gemini_service._strip_markdown_fences(text) == '{"a": 1}'
+
+
+def test_strip_markdown_fences_noop_on_plain_json():
+    text = '{"a": 1}'
+    assert gemini_service._strip_markdown_fences(text) == '{"a": 1}'
+
