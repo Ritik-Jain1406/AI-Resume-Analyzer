@@ -19,8 +19,9 @@ import streamlit as st
 
 from ai.action_verb_reference import ACTION_VERB_CATEGORIES
 from ai.gemini_service import GeminiServiceError, is_configured
+from ai.interview_preparation import build_interview_prep
 from ai.recommendation import generate_resume_suggestions
-from ai.schemas import AIResumeSuggestions
+from ai.schemas import AIResumeSuggestions, InterviewPrepResult
 from ats.ats_score import generate_ats_report
 from ats.schemas import ATSReport
 from comparison.comparison_service import compare_resumes
@@ -703,6 +704,97 @@ def render_resume_comparison() -> None:
     )
 
 
+def render_interview_prep() -> None:
+    st.title("🎤 Interview Preparation")
+
+    parsed: ParsedResume | None = st.session_state.get("parsed_resume")
+    if parsed is None:
+        st.info("Upload a resume on the **Resume Upload** page first.", icon="📤")
+        return
+
+    skill_result: SkillExtractionResult | None = st.session_state.get("skill_extraction")
+    if skill_result is None:
+        skill_result = extract_skills(parsed.cleaned_text)
+        st.session_state["skill_extraction"] = skill_result
+
+    has_project_content = bool(parsed.sections.experience or parsed.sections.projects)
+
+    if not is_configured():
+        st.caption(
+            "ℹ️ Gemini API key not configured — skill-based and behavioral "
+            "questions below are still fully available. Add GEMINI_API_KEY "
+            "to also generate project-specific questions."
+        )
+    elif not has_project_content:
+        st.caption("ℹ️ No Experience or Projects section detected — project-specific questions are unavailable.")
+    else:
+        st.caption("✅ Gemini configured — you can generate project-specific questions below.")
+
+    has_existing = "interview_prep_result" in st.session_state
+    generate_disabled = not (is_configured() and has_project_content)
+    button_label = "Regenerate Project Questions" if has_existing else "Generate Project Questions"
+
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        generate_clicked = st.button(button_label, type="primary", disabled=generate_disabled)
+    with col2:
+        if generate_disabled and has_project_content:
+            st.caption("Requires a configured Gemini API key.")
+
+    if generate_clicked:
+        with st.spinner("Generating project-specific questions with Gemini..."):
+            result = build_interview_prep(
+                skill_result=skill_result,
+                experience_text=parsed.sections.experience,
+                projects_text=parsed.sections.projects,
+                include_project_questions=True,
+            )
+        st.session_state["interview_prep_result"] = result
+    elif "interview_prep_result" not in st.session_state:
+        # Skill + behavioral questions are free/static, so show them immediately
+        # without requiring a button click — only project questions are gated.
+        st.session_state["interview_prep_result"] = build_interview_prep(
+            skill_result=skill_result,
+            experience_text=parsed.sections.experience,
+            projects_text=parsed.sections.projects,
+            include_project_questions=False,
+        )
+
+    result: InterviewPrepResult = st.session_state["interview_prep_result"]
+
+    for warning in result.warnings:
+        st.warning(warning, icon="⚠️")
+
+    tab_easy, tab_medium, tab_hard, tab_behavioral = st.tabs(
+        ["🟢 Easy", "🟡 Medium", "🔴 Hard", "🗣️ HR / Behavioral"]
+    )
+
+    technical_questions = result.skill_questions + result.project_questions
+    tier_tabs = {"Easy": tab_easy, "Medium": tab_medium, "Hard": tab_hard}
+    for tier, tab in tier_tabs.items():
+        with tab:
+            tier_questions = [q for q in technical_questions if q.difficulty == tier]
+            if not tier_questions:
+                st.caption("No questions in this tier yet.")
+            for q in tier_questions:
+                badge = "🤖 Gemini" if q.source == "gemini" else "📚 Bank"
+                label = f" — _{q.related_to}_" if q.related_to else ""
+                st.markdown(f"- {q.question}{label}  \n  <small>{badge}</small>", unsafe_allow_html=True)
+
+    with tab_behavioral:
+        for q in result.behavioral_questions:
+            st.markdown(f"- {q.question}")
+
+    all_questions = technical_questions + result.behavioral_questions
+    st.download_button(
+        "Download interview questions (JSON)",
+        data=json.dumps(result.model_dump(), indent=2, default=str),
+        file_name=f"{Path(parsed.source_filename).stem}_interview_prep.json",
+        mime="application/json",
+        disabled=not all_questions,
+    )
+
+
 def render_placeholder(page_name: str) -> None:
     st.title(page_name)
     st.warning(f"'{page_name}' isn't implemented yet — coming in a later phase.")
@@ -734,6 +826,8 @@ def main() -> None:
         render_skill_gap()
     elif selected_page == "Resume Comparison":
         render_resume_comparison()
+    elif selected_page == "Interview Prep":
+        render_interview_prep()
     elif selected_page == "AI Suggestions":
         render_ai_suggestions()
     elif selected_page == "Dashboard":

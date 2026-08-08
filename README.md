@@ -5,8 +5,8 @@ resumes, checks ATS (Applicant Tracking System) compatibility, matches
 resumes against job descriptions, identifies skill gaps, and generates
 AI-powered improvement suggestions — all through an interactive dashboard.
 
-> **Status:** Phases 1–9 implemented and tested. Phases 10–12 (interview
-> prep, admin/history, deployment) are not yet built.
+> **Status:** Phases 1–10 implemented and tested. Phases 11–12
+> (admin/history, deployment) are not yet built.
 
 ## Features
 
@@ -30,6 +30,12 @@ AI-powered improvement suggestions — all through an interactive dashboard.
   by side: ATS score delta (points + %), skills/keywords added or
   removed, and a deterministic (non-LLM) verdict on which is stronger.
   Fully independent of the single-resume session state used elsewhere.
+- 🎤 **Interview Preparation** (Phase 10) — hybrid question generator:
+  a static, curated skill-based question bank (Easy/Medium/Hard, no API
+  call), Gemini-generated project/experience-specific questions (only on
+  explicit request, reusing Phase 7's service), and a static HR/Behavioral
+  question set. Skill and behavioral questions work fully even without a
+  Gemini key.
 
 ## Tech Stack
 

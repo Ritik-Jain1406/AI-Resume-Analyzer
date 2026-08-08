@@ -1,0 +1,100 @@
+skill,difficulty,question
+Python,Easy,What is the difference between a list and a tuple in Python?
+Python,Medium,Explain how Python's garbage collection and reference counting work.
+Python,Hard,"How does the Global Interpreter Lock (GIL) affect multi-threaded Python programs, and how would you work around it?"
+Java,Easy,"What is the difference between JDK, JRE, and JVM?"
+Java,Medium,Explain the difference between an abstract class and an interface in Java.
+Java,Hard,How does Java's garbage collector decide when to promote an object from young generation to old generation?
+C++,Easy,What is the difference between a pointer and a reference in C++?
+C++,Medium,Explain RAII and why it's important in C++ resource management.
+C++,Hard,"What is the difference between a virtual destructor and a non-virtual one, and when would omitting one cause a bug?"
+C,Easy,What is the difference between malloc and calloc?
+C,Medium,Explain the difference between passing a pointer to a function versus passing an array.
+C,Hard,How would you detect and prevent a memory leak in a long-running C program?
+C#,Easy,What is the difference between a value type and a reference type in C#?
+C#,Medium,Explain the difference between IEnumerable and IQueryable.
+C#,Hard,How does the async/await pattern work under the hood in C#?
+JavaScript,Easy,What is the difference between == and === in JavaScript?
+JavaScript,Medium,Explain closures in JavaScript with an example.
+JavaScript,Hard,How does the JavaScript event loop handle microtasks versus macrotasks?
+TypeScript,Easy,What advantages does TypeScript provide over plain JavaScript?
+TypeScript,Medium,Explain the difference between an interface and a type alias in TypeScript.
+TypeScript,Hard,"How do generics work in TypeScript, and when would you use a constrained generic type?"
+Go,Easy,"What is a goroutine, and how is it different from a thread?"
+Go,Medium,Explain how channels are used for communication between goroutines.
+Go,Hard,How would you detect and fix a goroutine leak in a Go service?
+SQL,Easy,What is the difference between INNER JOIN and LEFT JOIN?
+SQL,Medium,Explain the difference between WHERE and HAVING clauses.
+SQL,Hard,How would you optimize a slow query that's doing a full table scan on a large table?
+HTML,Easy,What is the difference between a block-level element and an inline element?
+HTML,Medium,"What are semantic HTML elements, and why do they matter for accessibility and SEO?"
+HTML,Hard,How would you structure a complex form to be both accessible and performant on submission?
+CSS,Easy,What is the difference between margin and padding?
+CSS,Medium,Explain how the CSS box model and box-sizing property work together.
+CSS,Hard,"How does CSS specificity get calculated, and how would you debug a specificity conflict?"
+Django,Easy,What is the purpose of Django's ORM?
+Django,Medium,Explain the request/response lifecycle in a Django application.
+Django,Hard,How would you optimize a Django view suffering from the N+1 query problem?
+Flask,Easy,What is the difference between Flask and Django?
+Flask,Medium,Explain how Flask's application context and request context work.
+Flask,Hard,How would you structure a large Flask application using blueprints and application factories?
+React,Easy,What is the difference between props and state in React?
+React,Medium,Explain the React component lifecycle and how hooks like useEffect replace lifecycle methods.
+React,Hard,"How would you optimize a React app that's re-rendering too often, and what tools would you use to diagnose it?"
+Angular,Easy,What is the purpose of Angular modules?
+Angular,Medium,Explain the difference between a component and a directive in Angular.
+Angular,Hard,"How does Angular's change detection strategy work, and how would you optimize it with OnPush?"
+Node.js,Easy,What makes Node.js well-suited for I/O-heavy applications?
+Node.js,Medium,Explain the difference between the event loop's phases in Node.js.
+Node.js,Hard,How would you handle CPU-intensive work in a Node.js application without blocking the event loop?
+Spring Boot,Easy,"What is dependency injection, and how does Spring Boot implement it?"
+Spring Boot,Medium,"Explain the difference between @Component, @Service, and @Repository annotations."
+Spring Boot,Hard,How would you configure and troubleshoot a Spring Boot application's connection pool under high load?
+TensorFlow,Easy,"What is a tensor, and why is it the core data structure in TensorFlow?"
+TensorFlow,Medium,Explain the difference between eager execution and graph execution in TensorFlow.
+TensorFlow,Hard,How would you diagnose and fix a model that's overfitting during training?
+PyTorch,Easy,What is the difference between a PyTorch tensor and a NumPy array?
+PyTorch,Medium,Explain how autograd computes gradients in PyTorch.
+PyTorch,Hard,How would you implement a custom training loop with gradient accumulation in PyTorch?
+Pandas,Easy,What is the difference between a Series and a DataFrame in Pandas?
+Pandas,Medium,Explain the difference between .loc and .iloc for indexing.
+Pandas,Hard,How would you optimize a Pandas pipeline that's running out of memory on a large dataset?
+NumPy,Easy,What is the advantage of a NumPy array over a Python list for numerical work?
+NumPy,Medium,Explain broadcasting in NumPy with an example.
+NumPy,Hard,How would you vectorize a nested-loop computation to avoid Python-level iteration overhead?
+AWS,Easy,What is the difference between EC2 and Lambda?
+AWS,Medium,Explain the difference between an IAM role and an IAM user.
+AWS,Hard,"How would you design a highly available, auto-scaling architecture for a web application on AWS?"
+Azure,Easy,What is the difference between Azure App Service and a virtual machine?
+Azure,Medium,Explain how Azure Resource Groups help organize cloud resources.
+Azure,Hard,How would you design a disaster recovery strategy across Azure regions?
+GCP,Easy,What is the difference between Google Cloud Storage and Persistent Disk?
+GCP,Medium,Explain the difference between GKE and Cloud Run.
+GCP,Hard,"How would you design a cost-efficient, auto-scaling data pipeline using GCP services?"
+MySQL,Easy,What is the difference between a primary key and a foreign key?
+MySQL,Medium,Explain the difference between InnoDB and MyISAM storage engines.
+MySQL,Hard,How would you diagnose and resolve a deadlock in MySQL?
+PostgreSQL,Easy,What is the difference between VARCHAR and TEXT in PostgreSQL?
+PostgreSQL,Medium,Explain how indexes improve query performance and when they can hurt write performance.
+PostgreSQL,Hard,How would you design a partitioning strategy for a table with hundreds of millions of rows?
+MongoDB,Easy,What is the difference between a relational database and a document database like MongoDB?
+MongoDB,Medium,Explain the tradeoffs between embedding and referencing documents in MongoDB.
+MongoDB,Hard,How would you design a sharding strategy for a MongoDB collection with uneven data distribution?
+Redis,Easy,What are common use cases for Redis in a web application?
+Redis,Medium,Explain the difference between Redis's persistence options: RDB and AOF.
+Redis,Hard,How would you design a Redis-based rate limiter that's safe under concurrent access?
+Git,Easy,What is the difference between git merge and git rebase?
+Git,Medium,Explain the difference between git fetch and git pull.
+Git,Hard,How would you recover a commit that was lost after a hard reset?
+Docker,Easy,What is the difference between a Docker image and a Docker container?
+Docker,Medium,Explain the difference between the COPY and ADD instructions in a Dockerfile.
+Docker,Hard,How would you reduce the size and build time of a multi-stage Docker image?
+Kubernetes,Easy,What is the difference between a Pod and a Deployment in Kubernetes?
+Kubernetes,Medium,Explain the difference between a Service and an Ingress in Kubernetes.
+Kubernetes,Hard,How would you diagnose a pod that's stuck in CrashLoopBackOff?
+Linux,Easy,What is the difference between a hard link and a symbolic link?
+Linux,Medium,Explain the difference between a process and a thread in Linux.
+Linux,Hard,How would you diagnose a Linux server that's running out of memory under normal-looking load?
+CI/CD,Easy,What is the difference between continuous integration and continuous deployment?
+CI/CD,Medium,"Explain how a typical CI/CD pipeline stage-gates a deployment (build, test, deploy)."
+CI/CD,Hard,How would you design a CI/CD pipeline that supports safe rollback for a production incident?

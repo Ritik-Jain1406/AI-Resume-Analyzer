@@ -80,6 +80,60 @@ class JobSpecificSuggestion(BaseModel):
         return "Improve"
 
 
+VALID_DIFFICULTIES = ("Easy", "Medium", "Hard")
+
+
+class InterviewQuestion(BaseModel):
+    """One interview question, whether from the static bank or Gemini."""
+
+    question: str
+    difficulty: str  # "Easy" | "Medium" | "Hard"
+    category: str  # "Skill" | "Project" | "Experience" | "Behavioral"
+    source: str = "static"  # "static" | "gemini" — never fabricate this claim; set by the caller
+    related_to: str | None = None  # e.g. the skill name or project name this question targets
+
+    @field_validator("difficulty")
+    @classmethod
+    def _normalize_difficulty(cls, v: str) -> str:
+        if v in VALID_DIFFICULTIES:
+            return v
+        lowered = (v or "").strip().lower()
+        if "easy" in lowered or "beginner" in lowered:
+            return "Easy"
+        if "hard" in lowered or "advanced" in lowered or "senior" in lowered:
+            return "Hard"
+        return "Medium"
+
+
+class InterviewPrepResult(BaseModel):
+    """Full Phase 10 output: everything the Interview Prep page displays."""
+
+    skill_questions: list[InterviewQuestion] = Field(default_factory=list)
+    project_questions: list[InterviewQuestion] = Field(default_factory=list)
+    behavioral_questions: list[InterviewQuestion] = Field(default_factory=list)
+    gemini_available: bool = False
+    warnings: list[str] = Field(default_factory=list)
+
+
+class GeminiInterviewQuestionRaw(BaseModel):
+    """
+    Raw shape of one question in Gemini's project-questions response.
+    Deliberately minimal — `category` and `source` are set by
+    ai/interview_preparation.py itself after validation, never trusted
+    from the model's own output (the model has no way to know whether
+    its output should be labeled "gemini"; that's a fact about the
+    pipeline, not the content).
+    """
+
+    question: str
+    difficulty: str = "Medium"
+    related_to: str | None = None
+
+
+class GeminiInterviewQuestionsResponse(BaseModel):
+    questions: list[GeminiInterviewQuestionRaw] = Field(default_factory=list)
+
+
 class AIResumeSuggestions(BaseModel):
     """Full Phase 7 output: everything the AI Resume Suggestions page displays."""
 

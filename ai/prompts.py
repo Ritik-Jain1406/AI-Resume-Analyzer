@@ -140,3 +140,56 @@ def build_suggestions_prompt(
     lines.append(RESPONSE_SCHEMA_DESCRIPTION)
 
     return "\n".join(lines)
+
+
+# --------------------------------------------------------------------------- #
+# Phase 10: project/experience-based interview questions
+# --------------------------------------------------------------------------- #
+
+INTERVIEW_QUESTIONS_SYSTEM_INSTRUCTION = """You are an experienced technical interviewer preparing
+questions for a candidate based ONLY on their actual resume content.
+
+Rules you must always follow:
+- Generate questions ONLY about the projects and experience described below.
+- Never invent a project, technology, company, or achievement that isn't present in the text given.
+- Each question should be answerable by someone who actually did the work described — ask about
+  design decisions, tradeoffs, challenges, and specifics, not generic trivia.
+- Assign each question a difficulty of "Easy", "Medium", or "Hard" based on how deep the follow-up is.
+- Output must be a single JSON object matching exactly the schema described in the user message.
+  No markdown code fences, no commentary before or after the JSON.
+"""
+
+INTERVIEW_QUESTIONS_SCHEMA_DESCRIPTION = """
+Respond with a single JSON object with exactly this shape:
+
+{
+  "questions": [
+    {"question": "<question text>", "difficulty": "Easy" | "Medium" | "Hard", "related_to": "<project or role name this question is about>"}
+  ]
+}
+
+Generate at most 2 questions per project or role described below. If no projects or experience
+are provided, return {"questions": []}.
+"""
+
+
+def build_interview_questions_prompt(experience_text: str | None, projects_text: str | None) -> str:
+    """
+    Build the prompt requesting project/experience-grounded interview questions.
+
+    Returns None-safe text: callers should not call this at all if both
+    experience_text and projects_text are empty (see
+    ai/interview_preparation.py, which checks before calling Gemini).
+    """
+    lines = [
+        "Generate interview questions grounded only in the following resume content.",
+        "",
+        "=== EXPERIENCE ===",
+        experience_text or "(none detected)",
+        "",
+        "=== PROJECTS ===",
+        projects_text or "(none detected)",
+        "",
+        INTERVIEW_QUESTIONS_SCHEMA_DESCRIPTION,
+    ]
+    return "\n".join(lines)

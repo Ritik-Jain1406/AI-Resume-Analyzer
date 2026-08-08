@@ -70,6 +70,7 @@ class Settings(BaseSettings):
     # --- Skills data ---
     skills_csv: Path = DATA_DIR / "skills.csv"
     job_roles_csv: Path = DATA_DIR / "job_roles.csv"
+    interview_questions_csv: Path = DATA_DIR / "interview_questions.csv"
 
     # --- Phase 7: Gemini AI suggestions ---
     # Read from the GEMINI_API_KEY environment variable / .env file only.
