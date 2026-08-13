@@ -76,7 +76,7 @@ class Settings(BaseSettings):
     # Read from the GEMINI_API_KEY environment variable / .env file only.
     # Never given a default value and never logged or exposed to the UI.
     gemini_api_key: str | None = Field(default=None)
-    gemini_model: str = Field(default="gemini-2.5-flash")
+    gemini_model: str = Field(default="gemini-3.5-flash-lite")
 
 
 settings = Settings()
